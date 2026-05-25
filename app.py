@@ -8,9 +8,9 @@ from models import db, User, WordProgress, DailyPlan
 from vocab import IELTS_WORDS
 
  app = Flask(__name__)
-  app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ielts-vocab-secret-2024')
-  app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///words.db')
-  app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ielts-vocab-secret-2024')
+ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///words.db')
+ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
