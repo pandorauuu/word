@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}登录 - 雅思背单词{% endblock %}
+
+{% block extra_css %}
+<style>
+.auth-wrap {
+    min-height: calc(100vh - 56px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+.auth-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.12);
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 420px;
+}
+.auth-card h1 {
+    text-align: center;
+    font-size: 26px;
+    color: #1a73e8;
+    margin-bottom: 8px;
+}
+.auth-card .subtitle {
+    text-align: center;
+    color: #90a4ae;
+    font-size: 13px;
+    margin-bottom: 28px;
+}
+.form-group { margin-bottom: 18px; }
+.form-group label {
+    display: block;
+    font-size: 13px;
+    color: #546e7a;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+.form-control {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #cfd8dc;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color .2s;
+    color: #333;
+}
+.form-control:focus { border-color: #1a73e8; }
+.btn-block { width: 100%; padding: 11px; font-size: 16px; border-radius: 8px; margin-top: 6px; }
+.auth-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 13px;
+    color: #78909c;
+}
+.auth-footer a { color: #1a73e8; text-decoration: none; }
+.auth-footer a:hover { text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h1>📖 雅思词汇</h1>
+        <p class="subtitle">每天100词，轻松备考雅思</p>
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" name="username" class="form-control"
+                       placeholder="请输入用户名" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" name="password" class="form-control"
+                       placeholder="请输入密码" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">登 录</button>
+        </form>
+
+        <div class="auth-footer">
+            还没有账号？<a href="{{ url_for('register') }}">立即注册</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
