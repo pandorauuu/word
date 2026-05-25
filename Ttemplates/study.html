@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% block title %}今日学习 - 雅思背单词{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.page-header h2 { font-size: 22px; color: #1a73e8; }
+.page-header .date-label { font-size: 13px; color: #90a4ae; margin-top: 2px; }
+
+/* 进度区 */
+.progress-section { margin-bottom: 6px; }
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #546e7a;
+    margin-bottom: 6px;
+}
+
+/* 词汇列表 */
+.word-list { display: flex; flex-direction: column; gap: 0; }
+.word-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f4f8;
+    transition: background .15s;
+    gap: 12px;
+}
+.word-row:last-child { border-bottom: none; }
+.word-row:hover { background: #f8fbff; }
+.word-row.status-correct { background: #f1f8e9; }
+.word-row.status-wrong   { background: #fff3e0; }
+
+.word-num {
+    width: 36px;
+    text-align: right;
+    font-size: 12px;
+    color: #b0bec5;
+    flex-shrink: 0;
+}
+.word-main { flex: 1; min-width: 0; }
+.word-en {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1a237e;
+    letter-spacing: .3px;
+}
+.word-phonetic {
+    font-size: 12px;
+    color: #78909c;
+    margin-top: 1px;
+}
+.word-meaning {
+    flex: 1.2;
+    font-size: 14px;
+    color: #37474f;
+    cursor: pointer;
+    user-select: none;
+}
+.word-meaning .mask {
+    display: inline-block;
+    background: #cfd8dc;
+    color: transparent;
+    border-radius: 4px;
+    padding: 2px 6px;
+    letter-spacing: 2px;
+    transition: all .2s;
+    font-size: 15px;
+}
+.word-meaning.revealed .mask {
+    background: transparent;
+    color: #37474f;
+    letter-spacing: normal;
+}
+.reveal-hint {
+    font-size: 11px;
+    color: #b0bec5;
+    margin-top: 2px;
+    display: none;
+}
+.word-row:hover .reveal-hint { display: block; }
+.word-meaning.revealed .reveal-hint { display: none !important; }
+
+/* 操作按钮 */
+.word-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.btn-know, .btn-unknown {
+    border: none;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+    font-weight: 500;
+}
+.btn-know    { background: #e8f5e9; color: #2e7d32; }
+.btn-unknown { background: #fce4ec; color: #c62828; }
+.btn-know:hover    { background: #43a047; color: #fff; }
+.btn-unknown:hover { background: #e53935; color: #fff; }
+.btn-know.active    { background: #43a047; color: #fff; }
+.btn-unknown.active { background: #e53935; color: #fff; }
+
+/* 过滤标签 */
+.filter-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.filter-tab {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1.5px solid #cfd8dc;
+    background: #fff;
+    color: #546e7a;
+    transition: all .15s;
+}
+.filter-tab.active {
+    background: #1a73e8;
+    color: #fff;
+    border-color: #1a73e8;
+}
+
+/* 全部展开按钮 */
+.actions-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* 完成提示 */
+.complete-banner {
+    display: none;
+    background: linear-gradient(135deg, #43a047, #66bb6a);
+    color: #fff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    text-align: center;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(67,160,71,.3);
+}
+.complete-banner h3 { font-size: 20px; margin-bottom: 6px; }
+.complete-banner p  { font-size: 14px; opacity: .9; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <!-- 完成横幅 -->
+    <div class="complete-banner" id="completeBanner">
+        <h3>🎉 今日学习完成！</h3>
+        <p>已完成今天全部 {{ total }} 个单词，坚持就是胜利！</p>
+    </div>
+
+    <!-- 页头 -->
+    <div class="page-header">
+        <div>
+            <h2>📚 今日学习</h2>
+            <div class="date-label" id="todayDate"></div>
+        </div>
+        <div class="stat-row" style="margin:0;">
+            <div class="stat-item">
+                <div class="num" id="doneCount">{{ done }}</div>
+                <div class="lbl">已标记</div>
+            </div>
+            <div class="stat-item">
+                <div class="num">{{ total }}</div>
+                <div class="lbl">今日总词</div>
+            </div>
+            <div class="stat-item" style="background:#fff3e0;">
+                <div class="num" style="color:#e65100;">{{ wrong_count }}</div>
+                <div class="lbl">错词本</div>
+            </div>
+            {% if due_count > 0 %}
+            <div class="stat-item" style="background:#fce4ec;">
+                <div class="num" style="color:#c62828;">{{ due_count }}</div>
+                <div class="lbl">待复习</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card" style="padding: 16px 20px;">
+        <!-- 进度条 -->
+        <div class="progress-section">
+            <div class="progress-info">
+                <span>学习进度</span>
+                <span id="progressText">{{ done }} / {{ total }}</span>
+            </div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" id="progressFill"
+                     style="width: {{ (done/total*100)|round(1) }}%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作栏 -->
+    <div class="actions-bar">
+        <button class="btn btn-outline btn-sm" onclick="revealAll()">👁 全部展开</button>
+        <button class="btn btn-secondary btn-sm" onclick="hideAll()">🙈 全部隐藏</button>
+        <div style="flex:1"></div>
+        <div class="filter-tabs">
+            <span class="filter-tab active" onclick="filterWords('all',this)">全部 ({{ total }})</span>
+            <span class="filter-tab" onclick="filterWords('new',this)" id="tab-new">
+                未标记 (<span id="cnt-new">{{ total - done }}</span>)
+            </span>
+            <span class="filter-tab" onclick="filterWords('correct',this)">✅ 认识</span>
+            <span class="filter-tab" onclick="filterWords('wrong',this)">❌ 不认识</span>
+        </div>
+    </div>
+
+    <!-- 词汇列表 -->
+    <div class="card" style="padding:0; overflow:hidden;">
+        <div class="word-list" id="wordList">
+            {% for w in words %}
+            <div class="word-row status-{{ w.status }}"
+                 id="row-{{ w.index }}"
+                 data-status="{{ w.status }}"
+                 data-index="{{ w.index }}">
+                <div class="word-num">{{ loop.index }}</div>
+                <div class="word-main">
+                    <div class="word-en">{{ w.word }}</div>
+                    <div class="word-phonetic">{{ w.phonetic }}</div>
+                </div>
+                <div class="word-meaning" onclick="toggleMeaning(this)">
+                    <div class="mask">{{ w.meaning }}</div>
+                    <div class="reveal-hint">点击查看释义</div>
+                </div>
+                <div class="word-actions">
+                    <button class="btn-know {{ 'active' if w.status == 'correct' }}"
+                            onclick="mark({{ w.index }}, 'correct', this)">✅ 认识</button>
+                    <button class="btn-unknown {{ 'active' if w.status == 'wrong' }}"
+                            onclick="mark({{ w.index }}, 'wrong', this)">❌ 不认识</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TOTAL = {{ total }};
+let doneCount = {{ done }};
+
+// 显示今日日期
+document.getElementById('todayDate').textContent =
+    new Date().toLocaleDateString('zh-CN', {year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+// 初始检查是否完成
+checkComplete();
+
+function toggleMeaning(el) {
+    el.classList.toggle('revealed');
+}
+
+function revealAll() {
+    document.querySelectorAll('.word-meaning').forEach(el => el.classList.add('revealed'));
+}
+function hideAll() {
+    document.querySelectorAll('.word-meaning').forEach(el => el.classList.remove('revealed'));
+}
+
+function filterWords(status, tab) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.word-row').forEach(row => {
+        if (status === 'all' || row.dataset.status === status) {
+            row.style.display = 'flex';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function mark(wordIndex, action, btnEl) {
+    const row = document.getElementById('row-' + wordIndex);
+    const prevStatus = row.dataset.status;
+
+    // 乐观 UI
+    row.dataset.status = action;
+    row.className = 'word-row status-' + action;
+    row.querySelectorAll('.btn-know,.btn-unknown').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+
+    // 更新计数
+    if (prevStatus === 'new') {
+        doneCount++;
+        updateProgress();
+    }
+
+    fetch('/api/mark', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({word_index: wordIndex, action: action})
+    }).then(r => r.json()).then(data => {
+        if (!data.ok) console.error('标记失败');
+        // 更新未标记计数
+        const newCnt = document.querySelectorAll('.word-row[data-status="new"]').length;
+        document.getElementById('cnt-new').textContent = newCnt;
+        checkComplete();
+    });
+}
+
+function updateProgress() {
+    document.getElementById('doneCount').textContent = doneCount;
+    document.getElementById('progressText').textContent = doneCount + ' / ' + TOTAL;
+    const pct = Math.round(doneCount / TOTAL * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+}
+
+function checkComplete() {
+    const newRows = document.querySelectorAll('.word-row[data-status="new"]').length;
+    if (newRows === 0 && TOTAL > 0) {
+        document.getElementById('completeBanner').style.display = 'block';
+    }
+}
+</script>
+{% endblock %}
