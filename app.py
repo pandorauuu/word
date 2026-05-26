@@ -393,3 +393,8 @@ if __name__ == '__main__':
             db.session.commit()
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+@app.route('/reset_db_danger')
+def reset_db_danger():
+    db.drop_all()      # 删掉所有旧表
+    db.create_all()    # 按照你最新的代码重新建表（带 email 字段）
+    return "数据库重置成功！旧表已删除，新表已建立，快去注册吧！"
