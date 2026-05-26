@@ -3,61 +3,164 @@
 
 {% block extra_css %}
 <style>
+/* 整个背景加入现代感微渐变 */
 .auth-wrap {
     min-height: calc(100vh - 56px);
     display: flex;
     align-items: center;
     justify-content: center;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
     padding: 40px 20px;
 }
+
+/* 拟物化悬浮卡片，加入平滑过渡 */
 .auth-card {
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.12);
-    padding: 40px 36px;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(26, 115, 232, 0.08), 0 1px 8px rgba(0, 0, 0, 0.04);
+    padding: 45px 40px;
     width: 100%;
     max-width: 420px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+
+.auth-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(26, 115, 232, 0.12), 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+/* 标题渐变色与排版优化 */
 .auth-card h1 {
     text-align: center;
-    font-size: 26px;
-    color: #1a73e8;
-    margin-bottom: 8px;
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(45deg, #1a73e8, #0d47a1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
 }
+
 .auth-card .subtitle {
     text-align: center;
-    color: #90a4ae;
-    font-size: 13px;
-    margin-bottom: 28px;
+    color: #78909c;
+    font-size: 14px;
+    margin-bottom: 32px;
+    font-weight: 400;
 }
-.form-group { margin-bottom: 18px; }
+
+/* 表单分组 */
+.form-group { 
+    margin-bottom: 22px; 
+}
+
 .form-group label {
     display: block;
     font-size: 13px;
-    color: #546e7a;
-    margin-bottom: 6px;
-    font-weight: 500;
+    color: #455a64;
+    margin-bottom: 8px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
+
+/* 输入框微动效（聚焦时有蓝色呼吸灯） */
 .form-control {
     width: 100%;
-    padding: 10px 14px;
+    padding: 12px 16px;
     border: 1.5px solid #cfd8dc;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 15px;
     outline: none;
-    transition: border-color .2s;
-    color: #333;
+    color: #263238;
+    background-color: #fbfbfb;
+    transition: all 0.25s ease;
+    box-sizing: border-box;
 }
-.form-control:focus { border-color: #1a73e8; }
-.btn-block { width: 100%; padding: 11px; font-size: 16px; border-radius: 8px; margin-top: 6px; }
+
+.form-control:focus { 
+    border-color: #1a73e8; 
+    background-color: #fff;
+    box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1);
+}
+
+/* 登录按钮的高级渐变与悬浮放大效果 */
+.btn-block { 
+    width: 100%; 
+    padding: 13px; 
+    font-size: 16px; 
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(90deg, #1a73e8, #1557b0);
+    border: none;
+    border-radius: 10px; 
+    margin-top: 10px; 
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
+    transition: all 0.25s ease;
+}
+
+.btn-block:hover { 
+    background: linear-gradient(90deg, #1557b0, #0d47a1);
+    box-shadow: 0 6px 16px rgba(26, 115, 232, 0.3);
+    transform: scale(1.01);
+}
+
+.btn-block:active {
+    transform: scale(0.99);
+}
+
+/* 底部文案优化 */
 .auth-footer {
     text-align: center;
-    margin-top: 20px;
-    font-size: 13px;
-    color: #78909c;
+    margin-top: 24px;
+    font-size: 13.5px;
+    color: #607d8b;
 }
-.auth-footer a { color: #1a73e8; text-decoration: none; }
-.auth-footer a:hover { text-decoration: underline; }
+
+.auth-footer a { 
+    color: #1a73e8; 
+    text-decoration: none; 
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.auth-footer a:hover { 
+    text-decoration: underline; 
+    color: #0d47a1;
+}
+
+/* 优雅的错误提示气泡 */
+.alert-messages {
+    padding: 0;
+    margin-bottom: 24px;
+    list-style: none;
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.alert-danger {
+    background-color: #fce8e6;
+    color: #c5221f;
+    border: 1px solid #fad2cf;
+}
+
+.alert-warning {
+    background-color: #fef7e0;
+    color: #b06000;
+    border: 1px solid #fde293;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 </style>
 {% endblock %}
 
@@ -67,18 +170,32 @@
         <h1>📖 雅思词汇</h1>
         <p class="subtitle">每天100词，轻松备考雅思</p>
 
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="alert-messages">
+            {% for category, message in messages %}
+              <li class="alert alert-{{ category if category != 'error' else 'danger' }}">
+                  <span>⚠️ {{ message }}</span>
+              </li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
         <form method="POST" action="{{ url_for('login') }}">
             <div class="form-group">
-                <label>用户名</label>
-                <input type="text" name="username" class="form-control"
-                       placeholder="请输入用户名" required autocomplete="username">
+                <label>电子邮箱</label>
+                <input type="email" name="email" class="form-control"
+                       placeholder="请输入注册邮箱" required autocomplete="email">
             </div>
+            
             <div class="form-group">
                 <label>密码</label>
                 <input type="password" name="password" class="form-control"
                        placeholder="请输入密码" required autocomplete="current-password">
             </div>
-            <button type="submit" class="btn btn-primary btn-block">登 录</button>
+            
+            <button type="submit" class="btn btn-block">登 录</button>
         </form>
 
         <div class="auth-footer">
