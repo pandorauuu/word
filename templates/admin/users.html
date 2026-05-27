@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}用户管理{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:32px 20px;">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:10px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <a href="/admin" style="color:#8a7e76;text-decoration:none;font-size:14px;">← 返回后台</a>
+      <h1 style="font-size:22px;font-weight:700;">👥 用户管理</h1>
+    </div>
+    <span style="font-size:14px;color:#8a7e76;">共 {{ users.total }} 名用户</span>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div style="padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:14px;
+                  background:{% if category=='danger' %}#fdecea{% else %}#eafaf1{% endif %};
+                  color:{% if category=='danger' %}#c0392b{% else %}#27ae60{% endif %};
+                  border:1px solid {% if category=='danger' %}#f5c6cb{% else %}#a9dfbf{% endif %};">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div style="background:#fff;border:1px solid #e4ddd2;border-radius:14px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:#faf7f2;font-size:12px;color:#8a7e76;">
+          <th style="padding:12px 20px;text-align:left;">邮箱</th>
+          <th style="padding:12px 20px;text-align:left;">状态</th>
+          <th style="padding:12px 20px;text-align:left;">角色</th>
+          <th style="padding:12px 20px;text-align:left;">注册时间</th>
+          <th style="padding:12px 20px;text-align:left;">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users.items %}
+        <tr style="border-top:1px solid #f0ebe2;font-size:14px;">
+          <td style="padding:12px 20px;">{{ u.email }}</td>
+          <td style="padding:12px 20px;">
+            {% if u.is_verified %}
+              <span style="color:#27ae60;font-size:13px;">✓ 已验证</span>
+            {% else %}
+              <span style="color:#c0392b;font-size:13px;">✗ 未验证</span>
+            {% endif %}
+          </td>
+          <td style="padding:12px 20px;">
+            {% if u.is_admin %}
+              <span style="background:#fef9e7;color:#9a7d0a;font-size:11px;padding:2px 8px;border-radius:4px;">管理员</span>
+            {% else %}
+              <span style="color:#8a7e76;font-size:13px;">普通用户</span>
+            {% endif %}
+          </td>
+          <td style="padding:12px 20px;color:#8a7e76;">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+          <td style="padding:12px 20px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a href="/admin/user/{{ u.id }}"
+                 style="color:#c8960c;font-size:12px;text-decoration:none;">详情</a>
+              <form method="POST" action="/admin/user/{{ u.id }}/toggle_admin" style="display:inline;">
+                <button type="submit"
+                        style="background:none;border:none;color:#3498db;font-size:12px;cursor:pointer;padding:0;">
+                  {% if u.is_admin %}撤销管理员{% else %}设为管理员{% endif %}
+                </button>
+              </form>
+              <form method="POST" action="/admin/user/{{ u.id }}/delete" style="display:inline;"
+                    onsubmit="return confirm('确定删除用户 {{ u.email }}？此操作不可撤销')">
+                <button type="submit"
+                        style="background:none;border:none;color:#c0392b;font-size:12px;cursor:pointer;padding:0;">
+                  删除
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 分页 -->
+  {% if users.pages > 1 %}
+  <div style="display:flex;justify-content:center;gap:8px;margin-top:20px;">
+    {% for p in users.iter_pages() %}
+      {% if p %}
+        <a href="?page={{ p }}"
+           style="padding:6px 12px;border-radius:8px;text-decoration:none;font-size:14px;
+                  background:{% if p == users.page %}#1a1410{% else %}#fff{% endif %};
+                  color:{% if p == users.page %}#faf7f2{% else %}#1a1410{% endif %};
+                  border:1px solid #e4ddd2;">{{ p }}</a>
+      {% else %}
+        <span style="padding:6px 4px;color:#8a7e76;">…</span>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
