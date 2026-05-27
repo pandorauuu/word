@@ -1,60 +1,70 @@
-import json, os, random, string
+import json, os, random, string, threading
 import bcrypt
 from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail, Message
-from models import db, User, WordProgress, DailyPlan, VerificationCode
+from models import db, User, WordProgress, DailyPlan
 from vocab import IELTS_WORDS
 
 app = Flask(__name__)
-app.config['SECRET_KEY']                = os.environ.get('SECRET_KEY', 'ielts-vocab-secret-2024')
-app.config['SQLALCHEMY_DATABASE_URI']   = os.environ.get('DATABASE_URL', 'sqlite:///words.db')
+app.config['SECRET_KEY']                     = os.environ.get('SECRET_KEY', 'ielts-vocab-secret-2024')
+app.config['SQLALCHEMY_DATABASE_URI']        = os.environ.get('DATABASE_URL', 'sqlite:///words.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# ── 邮件配置 ──
-app.config['MAIL_SERVER']   = 'smtp.gmail.com'
-app.config['MAIL_PORT']     = 587
-app.config['MAIL_USE_TLS']  = True
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME', '')
+app.config['MAIL_SERVER']                    = 'smtp.gmail.com'
+app.config['MAIL_PORT']                      = 587
+app.config['MAIL_USE_TLS']                   = True
+app.config['MAIL_USERNAME']                  = os.environ.get('MAIL_USERNAME', '')
+app.config['MAIL_PASSWORD']                  = os.environ.get('MAIL_PASSWORD', '')
+app.config['MAIL_DEFAULT_SENDER']            = os.environ.get('MAIL_USERNAME', '')
 
 db.init_app(app)
 mail = Mail(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view    = 'login'
-login_manager.login_message = '请先登录'
+login_manager.login_view             = 'login'
+login_manager.login_message          = '请先登录'
+login_manager.login_message_category = 'warning'
 
 REVIEW_INTERVALS = [1, 2, 4, 7, 15, 30]
 TOTAL_WORDS      = len(IELTS_WORDS)
 ADMIN_EMAIL      = os.environ.get('ADMIN_EMAIL', 'staralshineone@gmail.com')
 
+# 验证码临时存储（内存）: { email: { code, expire, password } }
+pending_registrations = {}
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ── 工具函数 ──
-def gen_code(n=6):
-    return ''.join(random.choices(string.digits, k=n))
+# ── 异步发邮件（不阻塞服务器）──
+def send_email_async(flask_app, msg):
+    with flask_app.app_context():
+        try:
+            mail.send(msg)
+        except Exception as e:
+            print(f'邮件发送失败: {e}')
 
 def send_code_email(to_email, code):
     msg = Message(
         subject='【雅思词汇本】邮箱验证码',
         recipients=[to_email],
         html=f'''
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#faf7f2;border-radius:16px;">
-          <h2 style="color:#1a1410;">雅思词汇本 验证码</h2>
-          <p style="color:#3d3530;">你的验证码是：</p>
-          <div style="font-size:36px;font-weight:900;letter-spacing:0.2em;color:#c8960c;padding:16px 0;">{code}</div>
-          <p style="color:#8a7e76;font-size:13px;">验证码 10 分钟内有效，请勿泄露给他人。</p>
-        </div>
-        '''
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;
+                    padding:32px;background:#faf7f2;border-radius:16px;">
+          <h2 style="color:#1a1410;">雅思词汇本 · 邮箱验证</h2>
+          <p style="color:#3d3530;">你的注册验证码是：</p>
+          <div style="font-size:40px;font-weight:900;letter-spacing:0.25em;
+                      color:#c8960c;padding:20px 0;">{code}</div>
+          <p style="color:#8a7e76;font-size:13px;">验证码 10 分钟内有效，请勿泄露。</p>
+        </div>'''
     )
-    mail.send(msg)
+    t = threading.Thread(target=send_email_async, args=(app._get_current_object(), msg))
+    t.daemon = True
+    t.start()
 
+# ── 工具函数 ──
 def get_next_interval(current_interval):
     for i, v in enumerate(REVIEW_INTERVALS):
         if current_interval <= v:
@@ -68,18 +78,20 @@ def get_today_plan(user_id):
     plan  = DailyPlan.query.filter_by(user_id=user_id, date=today).first()
     if plan:
         return json.loads(plan.word_indices)
-    seen_indices = set(p.word_index for p in WordProgress.query.filter_by(user_id=user_id).all())
-    unseen  = [i for i in range(TOTAL_WORDS) if i not in seen_indices]
-    indices = unseen[:100]
+    seen    = set(p.word_index for p in WordProgress.query.filter_by(user_id=user_id).all())
+    indices = [i for i in range(TOTAL_WORDS) if i not in seen][:100]
     if len(indices) < 100:
         now = datetime.utcnow()
         due = WordProgress.query.filter(
-            WordProgress.user_id == user_id,
-            WordProgress.status  == 'wrong',
+            WordProgress.user_id     == user_id,
+            WordProgress.status      == 'wrong',
             WordProgress.next_review <= now
         ).all()
-        extra = [p.word_index for p in due if p.word_index not in indices]
-        indices += extra[:100 - len(indices)]
+        for p in due:
+            if p.word_index not in indices:
+                indices.append(p.word_index)
+            if len(indices) == 100:
+                break
     if len(indices) < 100:
         for i in range(TOTAL_WORDS):
             if i not in indices:
@@ -99,17 +111,10 @@ def get_due_review_words(user_id):
         WordProgress.next_review <= now
     ).all()
 
-# ══════════════════════════════════════════════
-#  注册 / 登录 / 登出
-# ══════════════════════════════════════════════
+# ════════════════════════════════════
+#  注册（邮箱 + 验证码）
+# ════════════════════════════════════
 
-@app.route('/')
-def index():
-    if current_user.is_authenticated:
-        return redirect(url_for('study'))
-    return redirect(url_for('login'))
-
-# ── 第一步：填邮箱 + 密码，发验证码 ──
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -127,59 +132,71 @@ def register():
         elif User.query.filter_by(email=email).first():
             flash('该邮箱已注册，请直接登录', 'danger')
         else:
-            code = gen_code()
-            # 删除旧验证码
-            VerificationCode.query.filter_by(email=email).delete()
-            vc = VerificationCode(email=email, code=code)
-            db.session.add(vc)
-            db.session.commit()
-            try:
-                send_code_email(email, code)
-            except Exception as e:
-                flash(f'验证码发送失败，请检查邮箱是否正确：{e}', 'danger')
-                return render_template('register.html')
-            # 把邮箱和密码临时存 session
-            session['reg_email']    = email
-            session['reg_password'] = password
-            flash('验证码已发送到你的邮箱，请查收', 'success')
-            return redirect(url_for('verify_register'))
+            code   = ''.join(random.choices(string.digits, k=6))
+            expire = datetime.utcnow() + timedelta(minutes=10)
+            pending_registrations[email] = {
+                'code': code, 'expire': expire, 'password': password
+            }
+            send_code_email(email, code)
+            session['pending_email'] = email
+            flash('验证码已发送到你的邮箱，请查收（注意垃圾邮件）', 'success')
+            return redirect(url_for('verify_email'))
     return render_template('register.html')
 
-# ── 第二步：输入验证码 ──
 @app.route('/verify', methods=['GET', 'POST'])
-def verify_register():
-    email = session.get('reg_email')
+def verify_email():
+    email = session.get('pending_email')
     if not email:
         return redirect(url_for('register'))
     if request.method == 'POST':
-        code = request.form.get('code', '').strip()
-        vc   = VerificationCode.query.filter_by(email=email, used=False).order_by(
-                   VerificationCode.created_at.desc()).first()
-        if not vc:
-            flash('验证码无效，请重新注册', 'danger')
-            return redirect(url_for('register'))
-        expire = vc.created_at + timedelta(minutes=10)
-        if datetime.utcnow() > expire:
+        code    = request.form.get('code', '').strip()
+        pending = pending_registrations.get(email)
+        if not pending:
             flash('验证码已过期，请重新注册', 'danger')
             return redirect(url_for('register'))
-        if vc.code != code:
+        if datetime.utcnow() > pending['expire']:
+            pending_registrations.pop(email, None)
+            flash('验证码已过期，请重新注册', 'danger')
+            return redirect(url_for('register'))
+        if pending['code'] != code:
             flash('验证码错误，请重试', 'danger')
             return render_template('verify.html', email=email)
-        # 验证通过，创建用户
-        vc.used = True
-        hashed  = bcrypt.hashpw(session['reg_password'].encode(), bcrypt.gensalt()).decode()
+        hashed   = bcrypt.hashpw(pending['password'].encode(), bcrypt.gensalt()).decode()
         is_admin = (email == ADMIN_EMAIL)
-        user = User(email=email, password_hash=hashed,
-                    is_verified=True, is_admin=is_admin)
+        user     = User(email=email, password_hash=hashed,
+                        is_verified=True, is_admin=is_admin)
         db.session.add(user)
         db.session.commit()
-        session.pop('reg_email',    None)
-        session.pop('reg_password', None)
-        flash('注册成功，请登录！', 'success')
+        pending_registrations.pop(email, None)
+        session.pop('pending_email', None)
+        flash('注册成功！请登录', 'success')
         return redirect(url_for('login'))
     return render_template('verify.html', email=email)
 
-# ── 登录 ──
+@app.route('/resend_code', methods=['POST'])
+def resend_code():
+    email   = session.get('pending_email')
+    pending = pending_registrations.get(email)
+    if not email or not pending:
+        return jsonify({'ok': False, 'msg': '请先注册'})
+    code   = ''.join(random.choices(string.digits, k=6))
+    expire = datetime.utcnow() + timedelta(minutes=10)
+    pending_registrations[email] = {
+        'code': code, 'expire': expire, 'password': pending['password']
+    }
+    send_code_email(email, code)
+    return jsonify({'ok': True, 'msg': '验证码已重新发送'})
+
+# ════════════════════════════════════
+#  登录 / 登出
+# ════════════════════════════════════
+
+@app.route('/')
+def index():
+    if current_user.is_authenticated:
+        return redirect(url_for('study'))
+    return redirect(url_for('login'))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -190,7 +207,7 @@ def login():
         user     = User.query.filter_by(email=email).first()
         if user and bcrypt.checkpw(password.encode(), user.password_hash.encode()):
             if not user.is_verified:
-                flash('邮箱未验证，请重新注册', 'warning')
+                flash('邮箱尚未验证，请重新注册', 'warning')
                 return render_template('login.html')
             user.last_login = datetime.utcnow()
             db.session.commit()
@@ -205,15 +222,15 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# ══════════════════════════════════════════════
-#  学习 / 复习 / 错词本（逻辑不变）
-# ══════════════════════════════════════════════
+# ════════════════════════════════════
+#  学习 / 复习 / 错词本
+# ════════════════════════════════════
 
 @app.route('/study')
 @login_required
 def study():
-    indices = get_today_plan(current_user.id)
-    words   = [{'index': i, **IELTS_WORDS[i]} for i in indices]
+    indices  = get_today_plan(current_user.id)
+    words    = [{'index': i, **IELTS_WORDS[i]} for i in indices]
     prog_map = {
         p.word_index: p.status
         for p in WordProgress.query.filter(
@@ -259,7 +276,7 @@ def api_mark():
 @login_required
 def review():
     due_words = get_due_review_words(current_user.id)
-    words = []
+    words     = []
     for p in due_words:
         w = dict(IELTS_WORDS[p.word_index])
         w['index']       = p.word_index
@@ -299,16 +316,17 @@ def api_mark_known():
         db.session.commit()
     return jsonify({'ok': True})
 
-# ══════════════════════════════════════════════
-#  后台管理（仅 admin 可访问）
-# ══════════════════════════════════════════════
+# ════════════════════════════════════
+#  后台管理
+# ════════════════════════════════════
+
+from functools import wraps
 
 def admin_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.is_admin:
-            flash('无权限访问', 'danger')
+            flash('无权限', 'danger')
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
@@ -317,16 +335,14 @@ def admin_required(f):
 @login_required
 @admin_required
 def admin_dashboard():
-    total_users   = User.query.count()
-    verified      = User.query.filter_by(is_verified=True).count()
-    total_progress= WordProgress.query.count()
-    total_wrong   = WordProgress.query.filter_by(status='wrong').count()
-    recent_users  = User.query.order_by(User.created_at.desc()).limit(10).all()
+    total_users    = User.query.count()
+    verified       = User.query.filter_by(is_verified=True).count()
+    total_progress = WordProgress.query.count()
+    total_wrong    = WordProgress.query.filter_by(status='wrong').count()
+    recent_users   = User.query.order_by(User.created_at.desc()).limit(10).all()
     return render_template('admin/dashboard.html',
-                           total_users=total_users,
-                           verified=verified,
-                           total_progress=total_progress,
-                           total_wrong=total_wrong,
+                           total_users=total_users, verified=verified,
+                           total_progress=total_progress, total_wrong=total_wrong,
                            recent_users=recent_users)
 
 @app.route('/admin/users')
@@ -343,7 +359,7 @@ def admin_users():
 def admin_user_detail(uid):
     user        = User.query.get_or_404(uid)
     wrong_words = WordProgress.query.filter_by(user_id=uid, status='wrong').all()
-    words = []
+    words       = []
     for p in wrong_words:
         w = dict(IELTS_WORDS[p.word_index])
         w['wrong_count'] = p.wrong_count
@@ -351,8 +367,7 @@ def admin_user_detail(uid):
         words.append(w)
     total_seen    = WordProgress.query.filter_by(user_id=uid).count()
     total_correct = WordProgress.query.filter_by(user_id=uid, status='correct').count()
-    return render_template('admin/user_detail.html',
-                           user=user, words=words,
+    return render_template('admin/user_detail.html', user=user, words=words,
                            total_seen=total_seen, total_correct=total_correct)
 
 @app.route('/admin/user/<int:uid>/toggle_admin', methods=['POST'])
@@ -383,18 +398,16 @@ def admin_delete_user(uid):
     flash('用户已删除', 'success')
     return redirect(url_for('admin_users'))
 
+# ════════════════════════════════════
+#  启动
+# ════════════════════════════════════
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        # 自动设置管理员
         admin = User.query.filter_by(email=ADMIN_EMAIL).first()
         if admin and not admin.is_admin:
             admin.is_admin = True
             db.session.commit()
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
-@app.route('/reset_db_danger')
-def reset_db_danger():
-    db.drop_all()      # 删掉所有旧表
-    db.create_all()    # 按照你最新的代码重新建表（带 email 字段）
-    return "数据库重置成功！旧表已删除，新表已建立，快去注册吧！"
