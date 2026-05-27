@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}用户详情{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:32px 20px;">
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+    <a href="/admin/users" style="color:#8a7e76;text-decoration:none;font-size:14px;">← 返回用户列表</a>
+    <h1 style="font-size:22px;font-weight:700;">用户详情</h1>
+  </div>
+
+  <!-- 用户信息卡 -->
+  <div style="background:#fff;border:1px solid #e4ddd2;border-radius:14px;padding:24px;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+      <div style="width:48px;height:48px;border-radius:50%;background:#1a1410;
+                  display:flex;align-items:center;justify-content:center;
+                  color:#faf7f2;font-size:20px;">
+        {{ user.email[0].upper() }}
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:700;">{{ user.email }}</div>
+        <div style="font-size:12px;color:#8a7e76;margin-top:2px;">
+          注册于 {{ user.created_at.strftime('%Y-%m-%d %H:%M') }}
+          {% if user.last_login %} · 最后登录 {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+        </div>
+      </div>
+      {% if user.is_admin %}
+        <span style="background:#fef9e7;color:#9a7d0a;font-size:12px;padding:3px 10px;border-radius:20px;margin-left:auto;">管理员</span>
+      {% endif %}
+    </div>
+
+    <!-- 学习统计 -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+      <div style="background:#faf7f2;border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:26px;font-weight:700;color:#1a1410;">{{ total_seen }}</div>
+        <div style="font-size:11px;color:#8a7e76;margin-top:3px;">学过的词</div>
+      </div>
+      <div style="background:#eafaf1;border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:26px;font-weight:700;color:#27ae60;">{{ total_correct }}</div>
+        <div style="font-size:11px;color:#8a7e76;margin-top:3px;">已掌握</div>
+      </div>
+      <div style="background:#fdecea;border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:26px;font-weight:700;color:#c0392b;">{{ words|length }}</div>
+        <div style="font-size:11px;color:#8a7e76;margin-top:3px;">错词本</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 错词列表 -->
+  {% if words %}
+  <div style="background:#fff;border:1px solid #e4ddd2;border-radius:14px;overflow:hidden;">
+    <div style="padding:14px 20px;border-bottom:1px solid #e4ddd2;font-weight:600;font-size:14px;">
+      📕 错词本（{{ words|length }} 词）
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0;">
+      {% for w in words %}
+      <div style="padding:14px 18px;border-bottom:1px solid #f0ebe2;border-right:1px solid #f0ebe2;">
+        <div style="font-size:16px;font-weight:700;margin-bottom:2px;">{{ w.en }}</div>
+        <div style="font-size:11px;color:#8a7e76;font-family:monospace;margin-bottom:3px;">{{ w.ph }}</div>
+        <div style="font-size:13px;color:#3d3530;">{{ w.cn }}</div>
+        <div style="font-size:11px;color:#c0392b;margin-top:4px;">错误 {{ w.wrong_count }} 次 · 下次复习 {{ w.next_review }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:40px;color:#8a7e76;font-size:14px;">
+    该用户暂无错词记录 🎉
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
