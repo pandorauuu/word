@@ -1,140 +1,60 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登录 - 雅思词汇</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .auth-card {
-            background: #ffffff;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(26, 115, 232, 0.08), 0 1px 8px rgba(0, 0, 0, 0.04);
-            padding: 45px 40px;
-            width: 100%;
-            max-width: 420px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-        .auth-card h1 {
-            font-size: 28px;
-            font-weight: 700;
-            background: linear-gradient(45deg, #1a73e8, #0d47a1);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0 0 10px 0;
-        }
-        .auth-card .subtitle {
-            color: #78909c;
-            font-size: 14px;
-            margin: 0 0 32px 0;
-        }
-        .form-group { 
-            margin-bottom: 22px; 
-            text-align: left;
-        }
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            color: #455a64;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        .form-control {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1.5px solid #cfd8dc;
-            border-radius: 10px;
-            font-size: 15px;
-            outline: none;
-            color: #263238;
-            background-color: #fbfbfb;
-            transition: all 0.25s ease;
-            box-sizing: border-box;
-        }
-        /* ✨ 蓝色呼吸灯效果 */
-        .form-control:focus { 
-            border-color: #1a73e8; 
-            background-color: #fff;
-            box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.15);
-        }
-        .btn-block { 
-            width: 100%; 
-            padding: 13px; 
-            font-size: 16px; 
-            font-weight: 600;
-            color: #fff;
-            background: linear-gradient(90deg, #1a73e8, #1557b0);
-            border: none;
-            border-radius: 10px; 
-            margin-top: 10px; 
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
-            transition: all 0.25s ease;
-        }
-        .btn-block:hover { 
-            background: linear-gradient(90deg, #1557b0, #0d47a1);
-        }
-        .auth-footer {
-            margin-top: 24px;
-            font-size: 13.5px;
-            color: #607d8b;
-        }
-        .auth-footer a { color: #1a73e8; text-decoration: none; font-weight: 600; }
-        .alert {
-            padding: 12px 16px;
-            border-radius: 10px;
-            font-size: 14px;
-            background-color: #fce8e6;
-            color: #c5221f;
-            border: 1px solid #fad2cf;
-            margin-bottom: 24px;
-            text-align: left;
-        }
-    </style>
-</head>
-<body>
+{% extends 'base.html' %}
+{% block title %}登录{% endblock %}
+{% block content %}
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:400px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:42px;margin-bottom:10px;">📖</div>
+      <h2 style="font-size:26px;font-weight:700;margin-bottom:6px;">欢迎回来</h2>
+      <p style="color:#8a7e76;font-size:14px;">登录继续你的雅思词汇学习</p>
+    </div>
 
-<div class="auth-card">
-    <h1>📖 雅思词汇</h1>
-    <p class="subtitle">每天100词，轻松备考雅思</p>
-
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for message in messages %}
-          <div class="alert">⚠️ {{ message }}</div>
-        {% endfor %}
-      {% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div style="padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:14px;
+                    background:{% if category=='danger' %}#fdecea{% elif category=='warning' %}#fef9e7{% else %}#eafaf1{% endif %};
+                    color:{% if category=='danger' %}#c0392b{% elif category=='warning' %}#9a7d0a{% else %}#27ae60{% endif %};
+                    border:1px solid {% if category=='danger' %}#f5c6cb{% elif category=='warning' %}#f9e79f{% else %}#a9dfbf{% endif %};">
+          {{ message }}
+        </div>
+      {% endfor %}
     {% endwith %}
 
     <form method="POST" action="/login">
-        <div class="form-group">
-            <label>电子邮箱</label>
-            <input type="email" name="email" class="form-control" placeholder="请输入注册邮箱" required autocomplete="email">
-        </div>
-        
-        <div class="form-group">
-            <label>密码</label>
-            <input type="password" name="password" class="form-control" placeholder="请输入密码" required autocomplete="current-password">
-        </div>
-        
-        <button type="submit" class="btn btn-block">登 录</button>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#3d3530;">
+          邮箱地址
+        </label>
+        <input type="email" name="email" placeholder="your@email.com"
+               required autocomplete="email"
+               style="width:100%;padding:12px 14px;border:1.5px solid #e4ddd2;
+                      border-radius:10px;font-size:15px;background:#fff;
+                      color:#1a1410;outline:none;">
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#3d3530;">
+          密码
+        </label>
+        <input type="password" name="password" placeholder="••••••••"
+               required autocomplete="current-password"
+               style="width:100%;padding:12px 14px;border:1.5px solid #e4ddd2;
+                      border-radius:10px;font-size:15px;background:#fff;
+                      color:#1a1410;outline:none;">
+      </div>
+
+      <button type="submit"
+              style="width:100%;padding:13px;border-radius:10px;border:none;
+                     background:#1a1410;color:#faf7f2;font-size:15px;font-weight:700;
+                     cursor:pointer;">
+        登录
+      </button>
     </form>
 
-    <div class="auth-footer">
-        还没有账号？<a href="/register">立即注册</a>
-    </div>
+    <p style="text-align:center;margin-top:20px;font-size:14px;color:#8a7e76;">
+      还没有账号？
+      <a href="/register" style="color:#c8960c;font-weight:600;text-decoration:none;">立即注册</a>
+    </p>
+  </div>
 </div>
-
-</body>
-</html>
+{% endblock %}
