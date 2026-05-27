@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}后台管理{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:32px 20px;">
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px;">
+    <span style="font-size:28px;">⚙️</span>
+    <h1 style="font-size:24px;font-weight:700;">后台管理中心</h1>
+  </div>
+
+  <!-- 统计卡片 -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:32px;">
+    <div style="background:#fff;border:1px solid #e4ddd2;border-radius:14px;padding:20px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#1a1410;">{{ total_users }}</div>
+      <div style="font-size:12px;color:#8a7e76;margin-top:4px;">注册用户总数</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e4ddd2;border-radius:14px;padding:20px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#27ae60;">{{ verified }}</div>
+      <div style="font-size:12px;color:#8a7e76;margin-top:4px;">已验证用户</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e4ddd2;border-radius:14px;padding:20px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#c8960c;">{{ total_progress }}</div>
+      <div style="font-size:12px;color:#8a7e76;margin-top:4px;">学习记录总数</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e4ddd2;border-radius:14px;padding:20px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#c0392b;">{{ total_wrong }}</div>
+      <div style="font-size:12px;color:#8a7e76;margin-top:4px;">错词记录总数</div>
+    </div>
+  </div>
+
+  <!-- 快捷入口 -->
+  <div style="display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap;">
+    <a href="/admin/users"
+       style="padding:10px 20px;background:#1a1410;color:#faf7f2;border-radius:10px;
+              text-decoration:none;font-size:14px;font-weight:600;">
+      👥 用户管理
+    </a>
+    <a href="/study"
+       style="padding:10px 20px;background:#fff;color:#1a1410;border:1px solid #e4ddd2;
+              border-radius:10px;text-decoration:none;font-size:14px;">
+      📖 去学习
+    </a>
+  </div>
+
+  <!-- 最近注册 -->
+  <div style="background:#fff;border:1px solid #e4ddd2;border-radius:14px;overflow:hidden;">
+    <div style="padding:16px 20px;border-bottom:1px solid #e4ddd2;font-weight:600;font-size:15px;">
+      🕐 最近注册用户
+    </div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:#faf7f2;font-size:12px;color:#8a7e76;">
+          <th style="padding:10px 20px;text-align:left;">邮箱</th>
+          <th style="padding:10px 20px;text-align:left;">状态</th>
+          <th style="padding:10px 20px;text-align:left;">注册时间</th>
+          <th style="padding:10px 20px;text-align:left;">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in recent_users %}
+        <tr style="border-top:1px solid #f0ebe2;font-size:14px;">
+          <td style="padding:12px 20px;">
+            {{ u.email }}
+            {% if u.is_admin %}<span style="background:#fef9e7;color:#9a7d0a;font-size:11px;padding:2px 6px;border-radius:4px;margin-left:6px;">管理员</span>{% endif %}
+          </td>
+          <td style="padding:12px 20px;">
+            {% if u.is_verified %}
+              <span style="color:#27ae60;">✓ 已验证</span>
+            {% else %}
+              <span style="color:#c0392b;">✗ 未验证</span>
+            {% endif %}
+          </td>
+          <td style="padding:12px 20px;color:#8a7e76;">{{ u.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td style="padding:12px 20px;">
+            <a href="/admin/user/{{ u.id }}" style="color:#c8960c;font-size:13px;text-decoration:none;">查看详情</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}
