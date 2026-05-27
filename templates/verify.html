@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}邮箱验证{% endblock %}
+{% block content %}
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:400px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:48px;margin-bottom:12px;">📬</div>
+      <h2 style="font-size:24px;font-weight:700;margin-bottom:8px;">验证你的邮箱</h2>
+      <p style="color:#8a7e76;font-size:14px;">
+        验证码已发送到<br>
+        <strong style="color:#1a1410;">{{ email }}</strong>
+      </p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div style="padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:14px;
+                    background:{% if category=='danger' %}#fdecea{% else %}#eafaf1{% endif %};
+                    color:{% if category=='danger' %}#c0392b{% else %}#27ae60{% endif %};
+                    border:1px solid {% if category=='danger' %}#f5c6cb{% else %}#a9dfbf{% endif %};">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST" action="/verify">
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#3d3530;">
+          输入 6 位验证码
+        </label>
+        <input type="text" name="code" maxlength="6" placeholder="000000"
+               autocomplete="off" autofocus
+               style="width:100%;padding:14px;border:1.5px solid #e4ddd2;border-radius:12px;
+                      font-size:24px;letter-spacing:0.3em;text-align:center;
+                      background:#fff;color:#1a1410;outline:none;">
+      </div>
+
+      <button type="submit"
+              style="width:100%;padding:14px;border-radius:12px;border:none;
+                     background:#1a1410;color:#faf7f2;font-size:15px;font-weight:700;
+                     cursor:pointer;margin-bottom:12px;">
+        确认验证码
+      </button>
+    </form>
+
+    <div style="text-align:center;">
+      <button onclick="resendCode()" id="resend-btn"
+              style="background:none;border:none;color:#c8960c;font-size:13px;
+                     cursor:pointer;text-decoration:underline;">
+        没收到？重新发送
+      </button>
+      <span id="resend-timer" style="font-size:13px;color:#8a7e76;display:none;"></span>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <a href="/register" style="font-size:13px;color:#8a7e76;">← 返回重新注册</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function resendCode() {
+  const btn   = document.getElementById('resend-btn');
+  const timer = document.getElementById('resend-timer');
+  btn.style.display = 'none';
+  timer.style.display = 'inline';
+
+  fetch('/resend_code', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        let sec = 60;
+        timer.textContent = `已发送，${sec}s 后可重试`;
+        const iv = setInterval(() => {
+          sec--;
+          timer.textContent = `已发送，${sec}s 后可重试`;
+          if (sec <= 0) {
+            clearInterval(iv);
+            timer.style.display = 'none';
+            btn.style.display   = 'inline';
+          }
+        }, 1000);
+      }
+    });
+}
+</script>
+{% endblock %}
