@@ -1,7 +1,7 @@
 import json, os, random, string, threading
 import bcrypt
 from datetime import datetime, date, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, current_app
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail, Message
 from models import db, User, WordProgress, DailyPlan
@@ -60,7 +60,7 @@ def send_code_email(to_email, code):
           <p style="color:#8a7e76;font-size:13px;">验证码 10 分钟内有效，请勿泄露。</p>
         </div>'''
     )
-    t = threading.Thread(target=send_email_async, args=(app._get_current_object(), msg))
+    t = threading.Thread(target=send_email_async, args=(current_app._get_current_object(), msg))
     t.daemon = True
     t.start()
 
