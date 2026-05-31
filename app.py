@@ -1,9 +1,10 @@
-import json, os, random, string, threading
+import json, os, random, string, threading, smtplib
 import bcrypt
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, date, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, current_app
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from flask_mail import Mail, Message
 from models import db, User, WordProgress, DailyPlan
 from vocab import IELTS_WORDS
 
@@ -11,15 +12,11 @@ app = Flask(__name__)
 app.config['SECRET_KEY']                     = os.environ.get('SECRET_KEY', 'ielts-vocab-secret-2024')
 app.config['SQLALCHEMY_DATABASE_URI']        = os.environ.get('DATABASE_URL', 'sqlite:///words.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['MAIL_SERVER']                    = 'smtp.gmail.com'
-app.config['MAIL_PORT']                      = 587
-app.config['MAIL_USE_TLS']                   = True
-app.config['MAIL_USERNAME']                  = os.environ.get('MAIL_USERNAME', '')
-app.config['MAIL_PASSWORD']                  = os.environ.get('MAIL_PASSWORD', '')
-app.config['MAIL_DEFAULT_SENDER']            = os.environ.get('MAIL_USERNAME', '')
 
 db.init_app(app)
-mail = Mail(app)
+
+GMAIL_USER = os.environ.get('MAIL_USERNAME', '')
+GMAIL_PASS = os.environ.get('MAIL_PASSWORD', '')
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -31,36 +28,39 @@ REVIEW_INTERVALS = [1, 2, 4, 7, 15, 30]
 TOTAL_WORDS      = len(IELTS_WORDS)
 ADMIN_EMAIL      = os.environ.get('ADMIN_EMAIL', 'staralshineone@gmail.com')
 
-# 验证码临时存储（内存）: { email: { code, expire, password } }
 pending_registrations = {}
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ── 异步发邮件（不阻塞服务器）──
-def send_email_async(flask_app, msg):
-    with flask_app.app_context():
+# ── 发邮件（Gmail SMTP，异步不卡服务器）──
+def send_code_email(to_email, code):
+    def _send():
         try:
-            mail.send(msg)
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = '【雅思词汇本】邮箱验证码'
+            msg['From']    = GMAIL_USER
+            msg['To']      = to_email
+            html = f'''
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;
+                        padding:32px;background:#faf7f2;border-radius:16px;">
+              <h2 style="color:#1a1410;">雅思词汇本 · 邮箱验证</h2>
+              <p style="color:#3d3530;">你的注册验证码是：</p>
+              <div style="font-size:40px;font-weight:900;letter-spacing:0.25em;
+                          color:#c8960c;padding:20px 0;">{code}</div>
+              <p style="color:#8a7e76;font-size:13px;">验证码 10 分钟内有效，请勿泄露。</p>
+            </div>'''
+            msg.attach(MIMEText(html, 'html'))
+            with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                server.ehlo()
+                server.starttls()
+                server.login(GMAIL_USER, GMAIL_PASS)
+                server.sendmail(GMAIL_USER, to_email, msg.as_string())
+            print(f'验证码已发送到 {to_email}')
         except Exception as e:
             print(f'邮件发送失败: {e}')
-
-def send_code_email(to_email, code):
-    msg = Message(
-        subject='【雅思词汇本】邮箱验证码',
-        recipients=[to_email],
-        html=f'''
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;
-                    padding:32px;background:#faf7f2;border-radius:16px;">
-          <h2 style="color:#1a1410;">雅思词汇本 · 邮箱验证</h2>
-          <p style="color:#3d3530;">你的注册验证码是：</p>
-          <div style="font-size:40px;font-weight:900;letter-spacing:0.25em;
-                      color:#c8960c;padding:20px 0;">{code}</div>
-          <p style="color:#8a7e76;font-size:13px;">验证码 10 分钟内有效，请勿泄露。</p>
-        </div>'''
-    )
-    t = threading.Thread(target=send_email_async, args=(current_app._get_current_object(), msg))
+    t = threading.Thread(target=_send)
     t.daemon = True
     t.start()
 
@@ -139,7 +139,7 @@ def register():
             }
             send_code_email(email, code)
             session['pending_email'] = email
-            flash('验证码已发送到你的邮箱，请查收（注意垃圾邮件）', 'success')
+            flash('验证码已发送，请查收邮箱（注意垃圾邮件夹）', 'success')
             return redirect(url_for('verify_email'))
     return render_template('register.html')
 
