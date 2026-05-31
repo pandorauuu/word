@@ -52,11 +52,10 @@ def send_code_email(to_email, code):
               <p style="color:#8a7e76;font-size:13px;">验证码 10 分钟内有效，请勿泄露。</p>
             </div>'''
             msg.attach(MIMEText(html, 'html'))
-            with smtplib.SMTP('smtp.gmail.com', 587) as server:
-                server.ehlo()
-                server.starttls()
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
                 server.login(GMAIL_USER, GMAIL_PASS)
                 server.sendmail(GMAIL_USER, to_email, msg.as_string())
+                
             print(f'验证码已发送到 {to_email}')
         except Exception as e:
             print(f'邮件发送失败: {e}')
