@@ -1,6 +1,1 @@
-flask
-flask-sqlalchemy
-flask-login
-flask-mail
-bcrypt
-gunicorn
+
