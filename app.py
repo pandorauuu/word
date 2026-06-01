@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, WordProgress, DailyPlan
-from vocab import IELTS_WORDS
+from vocab import vocabs, vocab_counts
 
 app = Flask(__name__)
 app.config['SECRET_KEY']                     = os.environ.get('SECRET_KEY', 'ielts-vocab-secret-2024')
