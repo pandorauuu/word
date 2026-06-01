@@ -1,7 +1,6 @@
-import json, os, random, string, threading, smtplib
+import json, os, random, string, threading
 import bcrypt
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests
 from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -15,8 +14,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-GMAIL_USER = os.environ.get('MAIL_USERNAME', '')
-GMAIL_PASS = os.environ.get('MAIL_PASSWORD', '')
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+MAIL_FROM      = 'noreply@ieltswords.top'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -34,29 +33,35 @@ pending_registrations = {}
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ── 发邮件（Gmail SMTP，异步不卡服务器）──
+# ── 发邮件（Resend API，异步不卡服务器）──
 def send_code_email(to_email, code):
     def _send():
         try:
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = '【雅思词汇本】邮箱验证码'
-            msg['From']    = GMAIL_USER
-            msg['To']      = to_email
-            html = f'''
-            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;
-                        padding:32px;background:#faf7f2;border-radius:16px;">
-              <h2 style="color:#1a1410;">雅思词汇本 · 邮箱验证</h2>
-              <p style="color:#3d3530;">你的注册验证码是：</p>
-              <div style="font-size:40px;font-weight:900;letter-spacing:0.25em;
-                          color:#c8960c;padding:20px 0;">{code}</div>
-              <p style="color:#8a7e76;font-size:13px;">验证码 10 分钟内有效，请勿泄露。</p>
-            </div>'''
-            msg.attach(MIMEText(html, 'html'))
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                server.login(GMAIL_USER, GMAIL_PASS)
-                server.sendmail(GMAIL_USER, to_email, msg.as_string())
-                
-            print(f'验证码已发送到 {to_email}')
+            response = requests.post(
+                'https://api.resend.com/emails',
+                headers={
+                    'Authorization': f'Bearer {RESEND_API_KEY}',
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'from': MAIL_FROM,
+                    'to': [to_email],
+                    'subject': '【雅思词汇本】邮箱验证码',
+                    'html': f'''
+                    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;
+                                padding:32px;background:#faf7f2;border-radius:16px;">
+                      <h2 style="color:#1a1410;">雅思词汇本 · 邮箱验证</h2>
+                      <p style="color:#3d3530;">你的注册验证码是：</p>
+                      <div style="font-size:40px;font-weight:900;letter-spacing:0.25em;
+                                  color:#c8960c;padding:20px 0;">{code}</div>
+                      <p style="color:#8a7e76;font-size:13px;">验证码 10 分钟内有效，请勿泄露。</p>
+                    </div>'''
+                }
+            )
+            if response.status_code == 200:
+                print(f'验证码已发送到 {to_email}')
+            else:
+                print(f'发送失败: {response.status_code} {response.text}')
         except Exception as e:
             print(f'邮件发送失败: {e}')
     t = threading.Thread(target=_send)
@@ -109,10 +114,6 @@ def get_due_review_words(user_id):
         WordProgress.status      == 'wrong',
         WordProgress.next_review <= now
     ).all()
-
-# ════════════════════════════════════
-#  注册（邮箱 + 验证码）
-# ════════════════════════════════════
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -186,10 +187,6 @@ def resend_code():
     send_code_email(email, code)
     return jsonify({'ok': True, 'msg': '验证码已重新发送'})
 
-# ════════════════════════════════════
-#  登录 / 登出
-# ════════════════════════════════════
-
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -220,10 +217,6 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
-
-# ════════════════════════════════════
-#  学习 / 复习 / 错词本
-# ════════════════════════════════════
 
 @app.route('/study')
 @login_required
@@ -315,10 +308,6 @@ def api_mark_known():
         db.session.commit()
     return jsonify({'ok': True})
 
-# ════════════════════════════════════
-#  后台管理
-# ════════════════════════════════════
-
 from functools import wraps
 
 def admin_required(f):
@@ -396,10 +385,6 @@ def admin_delete_user(uid):
     db.session.commit()
     flash('用户已删除', 'success')
     return redirect(url_for('admin_users'))
-
-# ════════════════════════════════════
-#  启动
-# ════════════════════════════════════
 
 if __name__ == '__main__':
     with app.app_context():
