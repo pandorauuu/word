@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h4>选择词库</h4>
+  <p class="text-muted small">各词库进度独立保存，随时可切换回来。</p>
+  <form method="POST">
+    <div class="row g-3 mt-1">
+      {% for key, info in word_lists.items() %}
+      <div class="col-md-4">
+        <div class="card h-100 {% if key == current_wl %}border-{{ info.color }}{% endif %}">
+          <div class="card-body text-center">
+            <h5>{{ info.label }} <span class="text-muted small">{{ info.name }}</span>
+              {% if key == current_wl %}<span class="badge bg-{{ info.color }} ms-1">当前</span>{% endif %}
+            </h5>
+            <p class="text-muted small mb-1">{{ info.description }}</p>
+            <p class="small">共 <b>{{ stats[key].total }}</b> 词 · 已学 <b>{{ stats[key].learned }}</b> · 错词 <b>{{ stats[key].wrong }}</b></p>
+            <button type="submit" name="word_list" value="{{ key }}"
+              class="btn btn-{{ info.color }} {% if key != current_wl %}btn-outline-{{ info.color }}{% endif %} w-100">
+              {% if key == current_wl %}继续学习{% else %}切换到此词库{% endif %}
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </form>
+</div>
+{% endblock %}
