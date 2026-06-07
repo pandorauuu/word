@@ -6,9 +6,8 @@
     <div style="text-align:center;margin-bottom:32px;">
       <div style="font-size:42px;margin-bottom:10px;">✨</div>
       <h2 style="font-size:26px;font-weight:700;margin-bottom:6px;">创建账号</h2>
-      <p style="color:#8a7e76;font-size:14px;">开始你的雅思词汇学习之旅</p>
+      <p style="color:#8a7e76;font-size:14px;">开始你的词汇学习之旅</p>
     </div>
-
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}
         <div style="padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:14px;
@@ -19,7 +18,6 @@
         </div>
       {% endfor %}
     {% endwith %}
-
     <form method="POST" action="/register">
       <div style="margin-bottom:14px;">
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#3d3530;">
@@ -29,9 +27,8 @@
                required autocomplete="email"
                style="width:100%;padding:12px 14px;border:1.5px solid #e4ddd2;
                       border-radius:10px;font-size:15px;background:#fff;
-                      color:#1a1410;outline:none;">
+                      color:#1a1410;outline:none;box-sizing:border-box;">
       </div>
-
       <div style="margin-bottom:14px;">
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#3d3530;">
           密码 <span style="font-weight:400;color:#8a7e76;">（至少 6 位）</span>
@@ -40,9 +37,8 @@
                required minlength="6" autocomplete="new-password"
                style="width:100%;padding:12px 14px;border:1.5px solid #e4ddd2;
                       border-radius:10px;font-size:15px;background:#fff;
-                      color:#1a1410;outline:none;">
+                      color:#1a1410;outline:none;box-sizing:border-box;">
       </div>
-
       <div style="margin-bottom:20px;">
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#3d3530;">
           确认密码
@@ -51,9 +47,8 @@
                required autocomplete="new-password"
                style="width:100%;padding:12px 14px;border:1.5px solid #e4ddd2;
                       border-radius:10px;font-size:15px;background:#fff;
-                      color:#1a1410;outline:none;">
+                      color:#1a1410;outline:none;box-sizing:border-box;">
       </div>
-
       <button type="submit"
               style="width:100%;padding:13px;border-radius:10px;border:none;
                      background:#1a1410;color:#faf7f2;font-size:15px;font-weight:700;
@@ -61,7 +56,6 @@
         发送验证码
       </button>
     </form>
-
     <p style="text-align:center;margin-top:20px;font-size:14px;color:#8a7e76;">
       已有账号？
       <a href="/login" style="color:#c8960c;font-weight:600;text-decoration:none;">直接登录</a>
