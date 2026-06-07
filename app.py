@@ -289,7 +289,18 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
-
+@app.route('/debug_db')
+def debug_db():
+    users = User.query.all()
+    result = []
+    for u in users:
+        result.append({
+            'id': u.id,
+            'email': getattr(u, 'email', 'NO EMAIL FIELD'),
+            'username': getattr(u, 'username', 'NO USERNAME FIELD'),
+        })
+    return jsonify(result)
+    
 @app.route('/select_wordlist', methods=['GET', 'POST'])
 @login_required
 def select_wordlist():
